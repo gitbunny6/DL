@@ -1,0 +1,27 @@
+# Import TensorFlow
+import tensorflow as tf
+
+# Create tensors
+a = tf.constant([1, 2, 3, 4])
+b = tf.constant([5, 6, 7, 8])
+
+# Addition
+addition = tf.add(a, b)
+
+# Multiplication
+multiplication = tf.multiply(a, b)
+
+# Display results
+print("Tensor A:", a.numpy())
+print("Tensor B:", b.numpy())
+print("Addition:", addition.numpy())
+print("Multiplication:", multiplication.numpy())
+
+# Create a 2D tensor
+matrix = tf.constant([[1, 2], [3, 4]])
+
+print("2D Tensor:")
+print(matrix.numpy())
+
+# Display shape
+print("Shape:", matrix.shape)
