@@ -1,0 +1,91 @@
+# CHIT 10: Anomaly Detection on Credit Card Dataset using Autoencoder
+
+# 1. Import libraries
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+import matplotlib.pyplot as plt
+
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Dense
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+
+# 2. Load uploaded CSV dataset
+df = pd.read_csv('creditcard.csv')
+
+print(df.head())
+
+# 3. Separate normal and fraudulent transactions
+normal = df[df['Class'] == 0]
+fraud = df[df['Class'] == 1]
+
+# 4. Select input features
+X_normal = normal.drop('Class', axis=1)
+X_fraud = fraud.drop('Class', axis=1)
+
+# 5. Split normal transactions
+X_train, X_test = train_test_split(
+    X_normal, test_size=0.2, random_state=42
+)
+
+# 6. Normalize data
+scaler = StandardScaler()
+
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+X_fraud = scaler.transform(X_fraud)
+
+# 7. Build Autoencoder
+input_dim = X_train.shape[1]
+
+input_layer = Input(shape=(input_dim,))
+
+encoded = Dense(16, activation='relu')(input_layer)
+encoded = Dense(8, activation='relu')(encoded)
+
+decoded = Dense(16, activation='relu')(encoded)
+decoded = Dense(input_dim, activation='linear')(decoded)
+
+autoencoder = Model(input_layer, decoded)
+
+# 8. Compile model
+autoencoder.compile(
+    optimizer='adam',
+    loss='mse'
+)
+
+# 9. Train only on normal transactions
+autoencoder.fit(
+    X_train, X_train,
+    epochs=10,
+    batch_size=32,
+    validation_data=(X_test, X_test)
+)
+
+# 10. Calculate reconstruction error
+reconstructed = autoencoder.predict(X_test)
+
+mse = np.mean(np.power(X_test - reconstructed, 2), axis=1)
+
+# 11. Set anomaly threshold
+threshold = np.percentile(mse, 95)
+
+print("Anomaly Threshold:", threshold)
+
+# 12. Detect anomalies
+predictions = mse > threshold
+
+print("Total Transactions:", len(predictions))
+print("Detected Anomalies:", np.sum(predictions))
+
+# 13. Visualize reconstruction errors
+plt.figure(figsize=(8, 5))
+plt.hist(mse, bins=50)
+plt.axvline(threshold, color='red', linestyle='dashed',
+            label='Anomaly Threshold')
+plt.xlabel("Reconstruction Error")
+plt.ylabel("Number of Transactions")
+plt.title("Anomaly Detection using Autoencoder")
+plt.legend()
+plt.show()
