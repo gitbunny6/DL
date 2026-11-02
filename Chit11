@@ -1,0 +1,100 @@
+
+# CHIT 11: Image Denoising using Autoencoder on MNIST
+
+# 1. Import libraries
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+import matplotlib.pyplot as plt
+
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Dense
+from sklearn.model_selection import train_test_split
+
+# 2. Load uploaded MNIST CSV dataset
+df = pd.read_csv('mnist.csv')
+
+print(df.head())
+
+# 3. Separate image pixels
+X = df.drop('label', axis=1).values
+
+# 4. Normalize pixel values
+X = X.astype('float32') / 255.0
+
+# 5. Split dataset
+X_train, X_test = train_test_split(
+    X, test_size=0.2, random_state=42
+)
+
+# 6. Add random noise to images
+noise_factor = 0.3
+
+X_train_noisy = X_train + noise_factor * np.random.normal(
+    loc=0.0, scale=1.0, size=X_train.shape
+)
+
+X_test_noisy = X_test + noise_factor * np.random.normal(
+    loc=0.0, scale=1.0, size=X_test.shape
+)
+
+# Clip values between 0 and 1
+X_train_noisy = np.clip(X_train_noisy, 0., 1.)
+X_test_noisy = np.clip(X_test_noisy, 0., 1.)
+
+# 7. Build Autoencoder
+input_layer = Input(shape=(784,))
+
+encoded = Dense(128, activation='relu')(input_layer)
+encoded = Dense(64, activation='relu')(encoded)
+
+decoded = Dense(128, activation='relu')(encoded)
+decoded = Dense(784, activation='sigmoid')(decoded)
+
+autoencoder = Model(input_layer, decoded)
+
+# 8. Compile model
+autoencoder.compile(
+    optimizer='adam',
+    loss='binary_crossentropy'
+)
+
+# 9. Train Autoencoder
+autoencoder.fit(
+    X_train_noisy, X_train,
+    epochs=10,
+    batch_size=256,
+    shuffle=True,
+    validation_data=(X_test_noisy, X_test)
+)
+
+# 10. Denoise images
+denoised_images = autoencoder.predict(X_test_noisy)
+
+# 11. Display original, noisy and denoised images
+n = 5
+
+plt.figure(figsize=(12, 6))
+
+for i in range(n):
+
+    # Original image
+    plt.subplot(3, n, i + 1)
+    plt.imshow(X_test[i].reshape(28, 28), cmap='gray')
+    plt.title("Original")
+    plt.axis('off')
+
+    # Noisy image
+    plt.subplot(3, n, i + 1 + n)
+    plt.imshow(X_test_noisy[i].reshape(28, 28), cmap='gray')
+    plt.title("Noisy")
+    plt.axis('off')
+
+    # Denoised image
+    plt.subplot(3, n, i + 1 + 2*n)
+    plt.imshow(denoised_images[i].reshape(28, 28), cmap='gray')
+    plt.title("Denoised")
+    plt.axis('off')
+
+plt.tight_layout()
+plt.show()
