@@ -25,3 +25,31 @@ print(matrix.numpy())
 
 # Display shape
 print("Shape:", matrix.shape)
+
+# Import PyTorch
+import torch
+
+# Create tensors
+a = torch.tensor([1, 2, 3, 4])
+b = torch.tensor([5, 6, 7, 8])
+
+# Addition
+addition = torch.add(a, b)
+
+# Multiplication
+multiplication = torch.mul(a, b)
+
+# Display results
+print("Tensor A:", a)
+print("Tensor B:", b)
+print("Addition:", addition)
+print("Multiplication:", multiplication)
+
+# Create a 2D tensor
+matrix = torch.tensor([[1, 2], [3, 4]])
+
+print("2D Tensor:")
+print(matrix)
+
+# Display shape
+print("Shape:", matrix.shape)
