@@ -1,0 +1,88 @@
+
+# CHIT 13: Image Classification using Transfer Learning on Animal Dataset
+
+# 1. Import libraries
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+import matplotlib.pyplot as plt
+
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
+from tensorflow.keras.applications import MobileNetV2
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+
+# 2. Load uploaded CSV dataset
+df = pd.read_csv('animal.csv')
+
+print(df.head())
+
+# 3. Separate features and labels
+X = df.drop('label', axis=1).values
+y = df['label'].values
+
+# 4. Encode labels
+encoder = LabelEncoder()
+y = encoder.fit_transform(y)
+
+# 5. Reshape images (assuming 64x64 RGB images)
+X = X.reshape(-1, 64, 64, 3)
+
+# 6. Resize images to 224x224
+X = tf.image.resize(X, (224, 224)).numpy()
+
+# 7. Preprocess images for MobileNetV2
+X = preprocess_input(X.astype('float32'))
+
+# 8. Split dataset
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# 9. Load pre-trained MobileNetV2 model
+base_model = MobileNetV2(
+    weights='imagenet',
+    include_top=False,
+    input_shape=(224, 224, 3)
+)
+
+# Freeze pre-trained layers
+base_model.trainable = False
+
+# 10. Add classification layers
+x = base_model.output
+x = GlobalAveragePooling2D()(x)
+x = Dense(128, activation='relu')(x)
+output = Dense(len(np.unique(y)), activation='softmax')(x)
+
+model = Model(inputs=base_model.input, outputs=output)
+
+# 11. Compile model
+model.compile(
+    optimizer='adam',
+    loss='sparse_categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+# 12. Train model
+model.fit(
+    X_train, y_train,
+    epochs=5,
+    batch_size=32
+)
+
+# 13. Evaluate model
+loss, accuracy = model.evaluate(X_test, y_test)
+
+print("Test Loss:", loss)
+print("Test Accuracy:", accuracy)
+
+# 14. Make prediction
+prediction = model.predict(X_test[:1])
+
+predicted_class = np.argmax(prediction[0])
+
+print("Predicted Animal:", encoder.inverse_transform([predicted_class])[0])
+print("Actual Animal:", encoder.inverse_transform([y_test[0]])[0])
