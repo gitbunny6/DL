@@ -1,0 +1,84 @@
+
+# CHIT 14: Continuous Bag of Words (CBOW) Model
+
+# 1. Import libraries
+import numpy as np
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, Lambda, Dense
+import tensorflow as tf
+
+# 2. Define text corpus
+corpus = [
+    "the cat sits on the mat",
+    "the dog plays in the park",
+    "the cat plays with the dog"
+]
+
+# 3. Tokenize the text
+tokenizer = Tokenizer()
+tokenizer.fit_on_texts(corpus)
+
+sequences = tokenizer.texts_to_sequences(corpus)
+vocab_size = len(tokenizer.word_index) + 1
+
+print("Vocabulary:", tokenizer.word_index)
+print("Vocabulary Size:", vocab_size)
+
+# 4. Generate CBOW training data
+window_size = 2
+
+contexts = []
+targets = []
+
+for sentence in sequences:
+    for i in range(window_size, len(sentence) - window_size):
+        context = sentence[i-window_size:i] + sentence[i+1:i+window_size+1]
+        target = sentence[i]
+
+        contexts.append(context)
+        targets.append(target)
+
+contexts = np.array(contexts)
+targets = to_categorical(targets, num_classes=vocab_size)
+
+# 5. Build CBOW model
+model = Sequential([
+    Embedding(vocab_size, 10, input_length=window_size * 2),
+    Lambda(lambda x: tf.reduce_mean(x, axis=1)),
+    Dense(vocab_size, activation='softmax')
+])
+
+# 6. Compile model
+model.compile(
+    optimizer='adam',
+    loss='categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+# 7. Train model
+model.fit(contexts, targets, epochs=100, verbose=1)
+
+# 8. Display model summary
+model.summary()
+
+# 9. Test prediction
+test_context = np.array([[ 
+    tokenizer.word_index['the'],
+    tokenizer.word_index['on'],
+    tokenizer.word_index['the'],
+    tokenizer.word_index['mat']
+]])
+
+prediction = model.predict(test_context)
+
+predicted_index = np.argmax(prediction[0])
+
+predicted_word = next(
+    (word for word, index in tokenizer.word_index.items()
+     if index == predicted_index),
+    "Unknown"
+)
+
+print("Predicted Word:", predicted_word)
