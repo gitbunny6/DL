@@ -1,0 +1,86 @@
+# CHIT 9: Autoencoder to Reconstruct MNIST Digits with Sparsity Constraint
+
+# 1. Import libraries
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+import matplotlib.pyplot as plt
+
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Dense, ActivityRegularization
+
+# 2. Load MNIST CSV dataset
+df = pd.read_csv('mnist.csv')
+
+# 3. Separate pixel values
+X = df.drop('label', axis=1).values
+
+# 4. Normalize pixel values
+X = X.astype('float32') / 255.0
+
+# 5. Split data into training and testing sets
+from sklearn.model_selection import train_test_split
+
+X_train, X_test = train_test_split(
+    X, test_size=0.2, random_state=42
+)
+
+# 6. Define Autoencoder architecture
+input_dim = X_train.shape[1]
+encoding_dim = 64
+
+input_layer = Input(shape=(input_dim,))
+
+# Encoder with sparsity constraint
+encoded = Dense(128, activation='relu')(input_layer)
+encoded = Dense(
+    encoding_dim,
+    activation='relu',
+    activity_regularizer=ActivityRegularization(l1=0.001)
+)(encoded)
+
+# Decoder
+decoded = Dense(128, activation='relu')(encoded)
+decoded = Dense(input_dim, activation='sigmoid')(decoded)
+
+# 7. Create Autoencoder model
+autoencoder = Model(input_layer, decoded)
+
+# 8. Compile model
+autoencoder.compile(
+    optimizer='adam',
+    loss='binary_crossentropy'
+)
+
+# 9. Train Autoencoder
+autoencoder.fit(
+    X_train, X_train,
+    epochs=10,
+    batch_size=256,
+    shuffle=True,
+    validation_data=(X_test, X_test)
+)
+
+# 10. Reconstruct images
+reconstructed = autoencoder.predict(X_test)
+
+# 11. Display original and reconstructed images
+n = 5
+
+plt.figure(figsize=(12, 4))
+
+for i in range(n):
+    # Original image
+    ax = plt.subplot(2, n, i + 1)
+    plt.imshow(X_test[i].reshape(28, 28), cmap='gray')
+    plt.title("Original")
+    plt.axis('off')
+
+    # Reconstructed image
+    ax = plt.subplot(2, n, i + 1 + n)
+    plt.imshow(reconstructed[i].reshape(28, 28), cmap='gray')
+    plt.title("Reconstructed")
+    plt.axis('off')
+
+plt.tight_layout()
+plt.show()
